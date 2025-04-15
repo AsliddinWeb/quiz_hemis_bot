@@ -15,7 +15,7 @@ FANLAR = {
     "TIM": "tests/TIM o'zbek.docx"
 }
 
-QUIZ_TIME = 10  # sekund
+QUIZ_TIME = 15  # sekund
 
 user_sessions = {}
 
