@@ -1,12 +1,12 @@
 import random
-from telegram import Update, Poll, ReplyKeyboardMarkup
+from telegram import Update, Poll, ReplyKeyboardMarkup, BotCommand
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, ContextTypes,
     MessageHandler, filters, PollAnswerHandler
 )
 from docx import Document
 
-TOKEN = "8046408146:AAHPaFK0RGq547XadP3GTDF1At5WVi49b48"
+TOKEN = "8046408146:AAE0o4qeB7xqVbCbavJI_8uAZFqPj8caKgc"
 
 FANLAR = {
     "MO'M": "tests/MO'M o'zbek.docx",
@@ -16,7 +16,6 @@ FANLAR = {
 }
 
 QUIZ_TIME = 15  # sekund
-
 user_sessions = {}
 
 def parse_docx(filename):
@@ -39,16 +38,28 @@ def parse_docx(filename):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # Agar oldingi session bo'lsa, uni bekor qilamiz
+    # Avvalgi testni bekor qilish
     if user_id in user_sessions:
         user_sessions.pop(user_id)
         await update.message.reply_text("⛔️ Oldingi test bekor qilindi.")
 
-    # Bosh menyuni ko'rsatamiz
+    # Bosh menyu
     keyboard = [[fan] for fan in FANLAR.keys()]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
     await update.message.reply_text("📚 Quyidagi fanlardan birini tanlang:", reply_markup=reply_markup)
 
+async def cansel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in user_sessions:
+        user_sessions.pop(user_id)
+        await update.message.reply_text("🛑 Test bekor qilindi.")
+    else:
+        await update.message.reply_text("Sizda davom etayotgan test yo‘q.")
+
+    # Bosh menyu
+    keyboard = [[fan] for fan in FANLAR.keys()]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+    await update.message.reply_text("📚 Quyidagi fanlardan birini tanlang:", reply_markup=reply_markup)
 
 async def fan_tanlash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tanlangan_fan = update.message.text
@@ -60,18 +71,19 @@ async def fan_tanlash(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'current_question': 0,
             'chat_id': update.effective_chat.id
         }
-        await update.message.reply_text(f"{tanlangan_fan} fani bo'yicha test boshlanmoqda!")
+        await update.message.reply_text(f"🧪 {tanlangan_fan} fani bo'yicha test boshlanmoqda!")
         await send_next_question(update.effective_user.id, context)
     else:
-        await update.message.reply_text("Mavjud fanlardan tanlang!")
+        await update.message.reply_text("⚠️ Iltimos, mavjud fanlardan tanlang!")
 
 async def send_next_question(user_id, context: ContextTypes.DEFAULT_TYPE):
     session = user_sessions.get(user_id)
 
     if session and session['current_question'] < len(session['questions']):
         question, options = session['questions'][session['current_question']]
+        
+        # Telegram cheklovlari uchun qisqartirish
         options = [opt if len(opt) <= 100 else opt[:97] + '...' for opt in options]
-
         correct_option = options[0]
         random.shuffle(options)
         correct_index = options.index(correct_option)
@@ -101,25 +113,25 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
     if session and session['poll_id'] == update.poll_answer.poll_id:
         await send_next_question(user_id, context)
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id in user_sessions:
-        user_sessions.pop(user_id)
-        await update.message.reply_text("❌ Test bekor qilindi.")
-    else:
-        await update.message.reply_text("Sizda hech qanday faol test yo'q.")
-
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Iltimos, /start orqali boshlang.")
+    await update.message.reply_text("⚠️ Iltimos, /start orqali boshlang.")
+
+async def set_commands(app):
+    await app.bot.set_my_commands([
+        BotCommand("start", "Boshlash"),
+        BotCommand("cansel", "Tugatish")
+    ])
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(CommandHandler('cancel', cancel))
+    app.add_handler(CommandHandler('cansel', cansel))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fan_tanlash))
     app.add_handler(PollAnswerHandler(receive_poll_answer))
     app.add_handler(MessageHandler(filters.COMMAND, unknown))
 
-    print("Bot ishga tushdi...")
+    app.post_init = set_commands  # Bot komandalarini sozlash
+
+    print("✅ Bot ishga tushdi...")
     app.run_polling()
