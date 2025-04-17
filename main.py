@@ -6,7 +6,7 @@ from telegram.ext import (
 )
 from docx import Document
 
-TOKEN = "8046408146:AAE0o4qeB7xqVbCbavJI_8uAZFqPj8caKgc"
+TOKEN = "8046408146:AAHPaFK0RGq547XadP3GTDF1At5WVi49b48"
 
 FANLAR = {
     "MO'M": "tests/MO'M o'zbek.docx",
