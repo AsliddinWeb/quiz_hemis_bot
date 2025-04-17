@@ -6,7 +6,7 @@ from telegram.ext import (
 )
 from docx import Document
 
-TOKEN = "8046408146:AAE0o4qeB7xqVbCbavJI_8uAZFqPj8caKgc"
+TOKEN = "8046408146:AAHPaFK0RGq547XadP3GTDF1At5WVi49b48"
 
 FANLAR = {
     "MO'M": "tests/MO'M o'zbek.docx",
@@ -49,7 +49,7 @@ async def fan_tanlash(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_sessions[update.effective_user.id] = {
             'questions': questions,
             'current_question': 0,
-            'chat_id': update.effective_chat.id  # chat_id saqlab olinadi
+            'chat_id': update.effective_chat.id
         }
         await update.message.reply_text(f"{tanlangan_fan} fani bo'yicha test boshlanmoqda!")
         await send_next_question(update.effective_user.id, context)
@@ -61,17 +61,15 @@ async def send_next_question(user_id, context: ContextTypes.DEFAULT_TYPE):
 
     if session and session['current_question'] < len(session['questions']):
         question, options = session['questions'][session['current_question']]
-        
-        # Telegram cheklovlari uchun variantlar qisqartiriladi
         options = [opt if len(opt) <= 100 else opt[:97] + '...' for opt in options]
 
-        correct_option = options[0]  # Har doim 1-variant to'g'ri deb olinadi
+        correct_option = options[0]
         random.shuffle(options)
         correct_index = options.index(correct_option)
 
         message = await context.bot.send_poll(
             chat_id=session['chat_id'],
-            question=question[:300],  # savol 300 belgidan oshmasligi kerak
+            question=question[:300],
             options=options,
             type=Poll.QUIZ,
             correct_option_id=correct_index,
@@ -94,6 +92,14 @@ async def receive_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE
     if session and session['poll_id'] == update.poll_answer.poll_id:
         await send_next_question(user_id, context)
 
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in user_sessions:
+        user_sessions.pop(user_id)
+        await update.message.reply_text("❌ Test bekor qilindi.")
+    else:
+        await update.message.reply_text("Sizda hech qanday faol test yo'q.")
+
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Iltimos, /start orqali boshlang.")
 
@@ -101,6 +107,7 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler('start', start))
+    app.add_handler(CommandHandler('cancel', cancel))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fan_tanlash))
     app.add_handler(PollAnswerHandler(receive_poll_answer))
     app.add_handler(MessageHandler(filters.COMMAND, unknown))
