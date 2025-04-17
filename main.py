@@ -37,9 +37,18 @@ def parse_docx(filename):
     return questions
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    # Agar oldingi session bo'lsa, uni bekor qilamiz
+    if user_id in user_sessions:
+        user_sessions.pop(user_id)
+        await update.message.reply_text("⛔️ Oldingi test bekor qilindi.")
+
+    # Bosh menyuni ko'rsatamiz
     keyboard = [[fan] for fan in FANLAR.keys()]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-    await update.message.reply_text("Quyidagi fanlardan birini tanlang:", reply_markup=reply_markup)
+    await update.message.reply_text("📚 Quyidagi fanlardan birini tanlang:", reply_markup=reply_markup)
+
 
 async def fan_tanlash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tanlangan_fan = update.message.text
